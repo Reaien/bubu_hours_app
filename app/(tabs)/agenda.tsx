@@ -1,8 +1,9 @@
-import { View, Text, TextInput } from "react-native";
-import React, { useState } from "react";
+import { View, Text, TextInput, Alert } from "react-native";
+import React, { useEffect, useState } from "react";
 import { Calendar, DateData, LocaleConfig } from "react-native-calendars";
 import { Button } from "react-native";
 import { Picker } from "@react-native-picker/picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Configuración del idioma en español del calendario config obligatoria de la libreria
 LocaleConfig.locales["es"] = {
@@ -57,21 +58,45 @@ const Calendario = () => {
   const [hours, setHours] = useState("");
   const [savedHours, setSavedHours] = useState<SavedHours>({});
 
+  // Cargar horas guardadas al iniciar la aplicación
+  useEffect(() => {
+    const loadSavedHours = async () => {
+      try {
+        const saved = await AsyncStorage.getItem("savedHours");
+        if (saved) {
+          setSavedHours(JSON.parse(saved)); // Parsear el JSON y actualizar el estado
+        }
+      } catch (error) {
+        console.error("Error al cargar las horas guardadas:", error);
+      }
+    };
+    loadSavedHours();
+  }, []);
+
   const onDayPress = (day: DateData) => {
     setSelectedDate(day.dateString);
     setHours(savedHours[day.dateString] || "");
   };
 
   //Grabar horas y alerta si no se selecciona una fecha
-  const saveHours = () => {
+  const saveHours = async () => {
     if (!selectedDate) {
-      alert("Por favor, selecciona un día antes de guardar las horas.");
+      Alert.alert(
+        "Error",
+        "Por favor, selecciona un día antes de guardar las horas."
+      );
       return;
     }
-    setSavedHours({
-      ...savedHours,
-      [selectedDate]: hours,
-    });
+
+    try {
+      const newSavedHours = { ...savedHours, [selectedDate]: hours };
+      setSavedHours(newSavedHours); // Actualizar el estado
+      await AsyncStorage.setItem("savedHours", JSON.stringify(newSavedHours)); // Guardar en AsyncStorage
+      Alert.alert("Éxito", "Horas guardadas correctamente.");
+    } catch (error) {
+      console.error("Error al guardar las horas:", error);
+      Alert.alert("Error", "No se pudieron guardar las horas.");
+    }
   };
   return (
     <View className="flex-1 p-4 bg-gray-50">
@@ -90,19 +115,17 @@ const Calendario = () => {
           arrowColor: "#f5b7b1",
         }}
       />
-
       {/* Fecha seleccionada */}
       <Text className="mt-4 text-lg text-gray-800">
         Fecha seleccionada: {selectedDate}
       </Text>
-
       {/* Selector numérico de horas extras */}
       <View className="mt-4 border border-gray-300 rounded-lg">
         <Picker
           selectedValue={hours}
           onValueChange={(itemValue) => setHours(itemValue)}
         >
-          {Array.from({ length: 24 }, (_, i) => i + 1).map((hour) => (
+          {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
             <Picker.Item
               key={hour}
               label={hour < 2 ? hour + " hora" : hour + " horas"}
@@ -111,9 +134,13 @@ const Calendario = () => {
           ))}
         </Picker>
       </View>
-
       {/* Botón para guardar */}
-      <Button title="Guardar" onPress={saveHours} />
+      <Button
+        color="#f5b7b1"
+        title="Guardar"
+        onPress={saveHours}
+        disabled={!selectedDate}
+      />
 
       {/* Horas guardadas */}
       <Text className="mt-4 text-lg text-gray-800">

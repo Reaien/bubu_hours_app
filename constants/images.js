@@ -6,6 +6,7 @@ import logo from "../assets/images/logo.png";
 import logoSmall from "../assets/images/logo-small.png";
 import empty from "../assets/images/empty.png";
 import portada from "../assets/images/portada.png";
+import dudu1 from "../assets/images/dudu1.png";
 
 export default {
   profile,
@@ -16,4 +17,5 @@ export default {
   logoSmall,
   empty,
   portada,
+  dudu1,
 };
